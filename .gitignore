@@ -1,0 +1,61 @@
+﻿# =============================================================================
+# .gitignore — partner-decode-female-agent
+# =============================================================================
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+eggs/
+.eggs/
+*.whl
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Data & models (runtime generated)
+data/
+models/
+*.db
+*.sqlite3
+
+# Environment secrets
+.env
+
+# Logs
+*.log
+logs/
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+Thumbs.db
+Desktop.ini
+
+# HF cache
+.cache/
+huggingface/

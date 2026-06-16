@@ -1,0 +1,91 @@
+agent:
+  name: partner-decode-female-agent
+  version: "1.0.0"
+  cluster: G
+  description: "Multimodal female partner communication and emotion decoder"
+
+server:
+  host: "0.0.0.0"
+  port: 8011
+  workers: 2
+  reload: false
+
+audio:
+  sample_rate: 16000
+  channels: 1
+  chunk_size: 1024
+  default_record_duration: 30
+
+feature_extraction:
+  mfcc_coefficients: 40
+  include_delta: true
+  include_delta2: true
+  chroma_bins: 12
+  use_wav2vec2: true
+  f0_fmin: 75       # Hz — female voice lower bound
+  f0_fmax: 400      # Hz — female voice upper bound
+
+behavior_classification:
+  gottman_threshold: 0.5
+  attachment_confidence_min: 0.4
+  distress_high_threshold: 0.7
+  counseling_required_threshold: 0.8
+  non_literal_confidence: 0.6
+
+safety_gates:
+  counseling_flag_threshold: 0.8
+  high_conflict_horseman_threshold: 0.7
+  max_sessions_without_disclaimer: 5
+
+visual_analysis:
+  enabled: true
+  use_mediapipe: true
+  microexpression_threshold_ms: 200
+  min_face_confidence: 0.5
+
+llm:
+  primary_provider: claude
+  primary_model: claude-opus-4-8
+  fallback_provider: openai
+  fallback_model: gpt-4o
+  offline_provider: ollama
+  offline_model: llama3
+  max_tokens: 2048
+  temperature: 0.3
+
+hf_models:
+  wav2vec2: facebook/wav2vec2-base
+  emotion_classifier: j-hartmann/emotion-english-distilroberta-base
+  transcription: openai/whisper-large-v3
+  text_embedding: BAAI/bge-large-en-v1.5
+  reranker: BAAI/bge-reranker-large
+  summarizer: facebook/bart-large-cnn
+  cache_dir: ./models
+
+knowledge_updater:
+  schedule: "weekly"
+  day_of_week: "sunday"
+  hour: 2
+  minute: 0
+  arxiv_categories:
+    - cs.CL
+    - cs.CV
+    - cs.HC
+  max_papers_per_run: 50
+  request_timeout_seconds: 30
+
+memory:
+  db_path: ./data/partner_decode.db
+  max_sessions_history: 1000
+
+quality_gates:
+  min_audio_duration_seconds: 0.5
+  min_rms_energy: 0.001
+  emotion_confidence_threshold: 0.3
+  counseling_message_required_above: 0.8
+  spectral_centroid_min_hz: 50
+  spectral_centroid_max_hz: 8000
+
+logging:
+  level: INFO
+  format: "%(asctime)s | %(levelname)s | %(name)s | %(message)s"

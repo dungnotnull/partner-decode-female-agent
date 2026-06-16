@@ -1,0 +1,135 @@
+version: "3.9"
+
+# ============================================================
+# partner-decode-female-agent — Docker Compose
+# Services: agent (CPU), agent-gpu (GPU), ollama (local LLM)
+# ============================================================
+
+# Dockerfile (docker/Dockerfile):
+# FROM python:3.12-slim
+# RUN apt-get update && apt-get install -y \
+#     ffmpeg libsndfile1 portaudio19-dev libgl1-mesa-glx libglib2.0-0 \
+#     && rm -rf /var/lib/apt/lists/*
+# WORKDIR /app
+# COPY requirements.txt .
+# RUN pip install --no-cache-dir -r requirements.txt
+# COPY . .
+# RUN useradd -m -u 1000 agentuser && chown -R agentuser:agentuser /app
+# USER agentuser
+# EXPOSE 8011
+# HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+#   CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8011/health')"
+# CMD ["python", "agent/main.py", "serve"]
+
+services:
+
+  # ------------------------------------------------------------
+  # Main agent (CPU mode)
+  # ------------------------------------------------------------
+  partner-decode-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: partner-decode-female-agent:latest
+    container_name: partner-decode-agent
+    ports:
+      - "8011:8011"
+    volumes:
+      - partner_data:/app/data
+      - partner_models:/app/models
+    env_file:
+      - ../config/.env.example
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8011
+      - LOG_LEVEL=INFO
+      - USE_WAV2VEC2=true
+      - USE_VISUAL_ANALYSIS=true
+      - OLLAMA_BASE_URL=http://ollama:11434
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8011/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    profiles:
+      - default
+      - cpu
+
+  # ------------------------------------------------------------
+  # GPU-accelerated agent (NVIDIA CUDA)
+  # ------------------------------------------------------------
+  partner-decode-agent-gpu:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: partner-decode-female-agent:latest
+    container_name: partner-decode-agent-gpu
+    ports:
+      - "8011:8011"
+    volumes:
+      - partner_data:/app/data
+      - partner_models:/app/models
+    env_file:
+      - ../config/.env.example
+    environment:
+      - HOST=0.0.0.0
+      - PORT=8011
+      - LOG_LEVEL=INFO
+      - USE_WAV2VEC2=true
+      - USE_VISUAL_ANALYSIS=true
+      - OLLAMA_BASE_URL=http://ollama:11434
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8011/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 90s
+    profiles:
+      - gpu
+
+  # ------------------------------------------------------------
+  # Ollama — local LLM server for offline/privacy mode
+  # ------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    container_name: partner-decode-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - partner_ollama_models:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    profiles:
+      - ollama
+      - privacy
+
+# ------------------------------------------------------------
+# Named Volumes
+# ------------------------------------------------------------
+volumes:
+  partner_data:
+    name: partner_data
+    driver: local
+  partner_models:
+    name: partner_models
+    driver: local
+  partner_ollama_models:
+    name: partner_ollama_models
+    driver: local
